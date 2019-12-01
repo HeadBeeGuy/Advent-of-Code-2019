@@ -1,0 +1,7 @@
+
+# ignore the actual built Rust code - alls we need is the source code
+target/
+
+# vim swap files
+*.swp
+
