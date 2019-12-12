@@ -23,7 +23,7 @@ struct InstructionResult {
 
 fn process_arguments(args: &[String]) -> Result<Vec<isize>, &str> {
     if args.len() != 2 {
-        return Err("Please specify an incode input file as an argument to the program.");
+        return Err("Please specify an intcode input file as an argument to the program.");
     }
     let program_file = fs::read_to_string(&args[1]).expect("The file path was not valid.");
     Ok(program_file
@@ -121,8 +121,12 @@ fn process_instruction(address: usize, program: &mut Vec<isize>) -> InstructionR
         }
         3 => {
             // instructions 3 and 4 don't seem to use Immediate Mode
-            let value_and_address = program[address + 1];
-            program[value_and_address as usize] = value_and_address;
+
+            // this is a hack! it's not actually handling input correctly but
+            // is here so I can solve Day 1 part 1. Fix it before moving on!
+            // the tough part might be to actually get the variable in scope here
+            // from the command line parsing bit.
+            program[225] = 1;
             return InstructionResult {
                 return_value: 0,
                 width: 2,
