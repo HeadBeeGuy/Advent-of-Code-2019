@@ -2,7 +2,12 @@
 
 // This ended up being a huge undertaking. I had several nights in bed thinking
 // about Intcode when I was trying to sleep. I started dabbling in structs and
-// enums. Something still isn't functioning right!
+// enums.
+
+// Thanks to the help of some kind folks on the Advent of Code subreddit, it
+// finally works! I wasn't handling "input" correctly.
+
+// I wonder if this is what it's like to try to write an emulator.
 
 use std::env;
 use std::fs;
@@ -21,41 +26,46 @@ struct InstructionResult {
     halt: bool,
 }
 
-fn process_arguments(args: &[String]) -> Result<Vec<isize>, &str> {
-    if args.len() != 2 {
-        return Err("Please specify an intcode input file as an argument to the program.");
+fn process_arguments(args: &[String]) -> Result<(Vec<isize>, isize), &str> {
+    if args.len() != 3 {
+        return Err("Please use the following arguments when you run the program: an intcode file and an integer input.");
     }
     let program_file = fs::read_to_string(&args[1]).expect("The file path was not valid.");
-    Ok(program_file
-        .trim()
-        .split(",")
-        .map(|item| item.parse().unwrap())
-        .collect())
+    let program_input = &args[2]
+        .parse::<isize>()
+        .expect("Please confirm that the program input is an integer");
+    Ok((
+        program_file
+            .trim()
+            .split(",")
+            .map(|item| item.parse().unwrap())
+            .collect(),
+        *program_input,
+    ))
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let mut intcode_program = process_arguments(&args).unwrap_or_else(|err| {
+    let (mut intcode_program, program_input) = process_arguments(&args).unwrap_or_else(|err| {
         println!("Argument error: {}", err);
         process::exit(1);
     });
 
-    // This is the input as specified by the problem definition
-    // Maybe I should make it a command-line argument if future problems dictate.
-    intcode_program[1] = 1;
-    // println!("{:?}", intcode_program);
     let mut current_index = 0;
     loop {
-        let result = process_instruction(current_index, &mut intcode_program);
+        let result = process_instruction(current_index, &mut intcode_program, program_input);
         if result.halt {
             break;
         }
         current_index += result.width;
     }
-    println!("{:?}", intcode_program);
 }
 
-fn process_instruction(address: usize, program: &mut Vec<isize>) -> InstructionResult {
+fn process_instruction(
+    address: usize,
+    program: &mut Vec<isize>,
+    program_input: isize,
+) -> InstructionResult {
     let opcode = program[address];
     let mut short_opcode = opcode;
 
@@ -71,6 +81,7 @@ fn process_instruction(address: usize, program: &mut Vec<isize>) -> InstructionR
 
         // This is probably inefficient - convert the (up to 2) remaining digits
         // to a string, then parse them backwards because they go right-to-left.
+        // As of yet, parameter 3 doesn't seem to apply to anything.
         let remaining_opcode = (opcode / 100).to_string();
         let mut remaining_codes = remaining_opcode.chars().rev().peekable();
 
@@ -120,13 +131,8 @@ fn process_instruction(address: usize, program: &mut Vec<isize>) -> InstructionR
             };
         }
         3 => {
-            // instructions 3 and 4 don't seem to use Immediate Mode
-
-            // this is a hack! it's not actually handling input correctly but
-            // is here so I can solve Day 1 part 1. Fix it before moving on!
-            // the tough part might be to actually get the variable in scope here
-            // from the command line parsing bit.
-            program[225] = 1;
+            let save_location = program[address + 1] as usize;
+            program[save_location] = program_input;
             return InstructionResult {
                 return_value: 0,
                 width: 2,
