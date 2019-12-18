@@ -4,7 +4,6 @@
 // When it returns a result, I use an Option, since I just read about them again.
 // Inputs are now passed in as a Vector and they get popped off as they're fed in.
 
-
 use std::{env, fs, process};
 
 #[derive(Debug, PartialEq)]
@@ -33,8 +32,8 @@ fn process_arguments(args: &[String]) -> Result<Vec<isize>, &str> {
 }
 
 fn main() {
-    let mut final_vector: Vec<Vec<isize>> = Vec::new();
-    heaps_alg(&mut vec![0, 1, 2, 3, 4], 5, &mut final_vector);
+    let mut all_permutations: Vec<Vec<isize>> = Vec::new();
+    heaps_alg(&mut vec![0, 1, 2, 3, 4], 5, &mut all_permutations);
 
     let args: Vec<String> = env::args().collect();
     let intcode_program = process_arguments(&args).unwrap_or_else(|err| {
@@ -42,18 +41,21 @@ fn main() {
         process::exit(1);
     });
 
-
     let mut max_signal = 0;
-    for phase_sequence in final_vector.iter() {
+    for phase_sequence in all_permutations.iter() {
         let mut current_sequence = phase_sequence.clone();
         let mut input_signals = vec![0]; // defined by problem: Initial input is 0
         for _ in 1..=5 {
-            let mut current_inputs = vec![input_signals.pop().unwrap(), current_sequence.pop().unwrap()];
+            let mut current_inputs = vec![
+                input_signals.pop().unwrap(),
+                current_sequence.pop().unwrap(),
+            ];
             let mut program = intcode_program.clone();
 
             let mut instruction_pointer = 0;
             loop {
-                let result = process_instruction(instruction_pointer, &mut program, &mut current_inputs);
+                let result =
+                    process_instruction(instruction_pointer, &mut program, &mut current_inputs);
                 if result.halt {
                     break;
                 }
@@ -64,7 +66,9 @@ fn main() {
             }
         }
 
-        let final_value = input_signals.pop().expect("There was no final value after running through the input sequence.");
+        let final_value = input_signals
+            .pop()
+            .expect("There was no final value after running through the input sequence.");
         if final_value > max_signal {
             max_signal = final_value;
         }
@@ -76,14 +80,14 @@ fn main() {
 // I wish I could say that I derived this on my own! But actually I just did a
 // search and adapted this from this post:
 // https://users.rust-lang.org/t/heaps-algorithm-incomplete/32585/3
-fn heaps_alg(v: &mut [isize], n: usize, final_vector: &mut Vec<Vec<isize>>) {
+fn heaps_alg(v: &mut [isize], n: usize, all_permutations: &mut Vec<Vec<isize>>) {
     if n == 1 {
-        final_vector.push(v.to_vec()); // this is probably not the best way to do this
+        all_permutations.push(v.to_vec()); // this is probably not the best way to do this
         return;
     }
 
     for x in 0..n - 1 {
-        heaps_alg(v, n - 1, final_vector);
+        heaps_alg(v, n - 1, all_permutations);
 
         if n % 2 == 0 {
             v.swap(n - 1, x);
@@ -92,7 +96,7 @@ fn heaps_alg(v: &mut [isize], n: usize, final_vector: &mut Vec<Vec<isize>>) {
         }
     }
 
-    heaps_alg(v, n - 1, final_vector);
+    heaps_alg(v, n - 1, all_permutations);
 }
 
 fn process_instruction(
